@@ -1,2 +1,3 @@
-# GNS3-Projects
-This repo contains GNS3/EVE-NG labs Configs
+This Branch Contains ARISTA/vEOS config to demonstrate BGP Confederation with multiple VRFs.
+
+
