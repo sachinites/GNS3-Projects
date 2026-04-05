@@ -1,0 +1,774 @@
+Configs :
+============
+
+CE1
+===================
+
+CE1# show running-config
+Building configuration...
+
+Current configuration:
+!
+frr version 10.4.1
+frr defaults traditional
+hostname vm
+log syslog informational
+hostname CE1
+service integrated-vtysh-config
+!
+ip prefix-list Cust-A-Networks seq 1 permit 126.0.0.0/30
+ip prefix-list Cust-A-Networks seq 2 permit 128.0.0.0/30
+
+ip prefix-list Cust-A-Networks seq 3 permit 129.0.0.0/30
+!
+route-map ALLOW-CUST-A-IN permit 10
+match ip address prefix-list Cust-A-Networks
+exit
+
+!
+interface ens4
+ip address 192.168.1.2/30
+exit
+!
+interface ens5
+ip address 126.0.0.1/30
+exit
+!
+router bgp 131
+neighbor 192.168.1.1 remote-as 123
+!
+address-family ipv4 unicast
+network 126.0.0.0/30
+neighbor 192.168.1.1 route-map ALLOW-CUST-A-IN in
+neighbor 192.168.1.1 route-map ALLOW-CUST-A-IN out
+exit-address-family
+exit
+!
+end
+
+CE2
+===================
+
+
+vm# show running-config
+Building configuration...
+
+Current configuration:
+!
+frr version 10.4.1
+frr defaults traditional
+hostname vm
+log syslog informational
+service integrated-vtysh-config
+!
+ip prefix-list Cust-A-Networks seq 1 permit 126.0.0.0/30
+ip prefix-list Cust-A-Networks seq 2 permit 128.0.0.0/30
+
+ip prefix-list Cust-A-Networks seq 3 permit 129.0.0.0/30
+!
+route-map ALLOW-CUST-A-IN permit 10
+match ip address prefix-list Cust-A-Networks
+exit
+!
+interface ens4
+ip address 192.168.2.1/30
+exit
+!
+interface ens5
+ip address 128.0.0.1/30
+exit
+!
+router bgp 132
+neighbor 192.168.2.2 remote-as 123
+!
+address-family ipv4 unicast
+network 128.0.0.0/30
+neighbor 192.168.2.2 route-map ALLOW-CUST-A-IN in
+neighbor 192.168.2.2 route-map ALLOW-CUST-A-IN out
+exit-address-family
+exit
+!
+end
+
+Junos 1
+===================
+
+root# show | display set
+
+set version 24.2R1-S2.5
+set interfaces ge-0/0/2 unit 0 family inet address 1.0.0.1/24
+set interfaces ge-0/0/2 unit 0 family mpls
+set interfaces ge-0/0/3 unit 0 family inet address 2.0.0.2/24
+set interfaces ge-0/0/3 unit 0 family mpls
+set interfaces lo0 unit 0 family inet address 100.0.0.1/32
+set interfaces lo0 unit 0 family mpls
+set routing-options autonomous-system 64513
+set routing-options confederation 123
+set routing-options confederation members 64512
+set routing-options confederation members 64513
+set routing-options confederation members 64514
+set protocols bgp group sub-AS-64513 type internal
+set protocols bgp group sub-AS-64513 cluster 100.0.0.5
+set protocols bgp group sub-AS-64513 neighbor 2.0.0.1 family inet unicast
+set protocols bgp group sub-AS-64513 neighbor 2.0.0.1 family inet-vpn unicast
+set protocols bgp group sub-AS-64513 neighbor 2.0.0.1 peer-as 64513
+set protocols bgp group sub-AS-64513 neighbor 2.0.0.1 local-as 64513
+set protocols bgp group sub-AS-64513 neighbor 1.0.0.2 family inet unicast
+set protocols bgp group sub-AS-64513 neighbor 1.0.0.2 family inet-vpn unicast
+set protocols bgp group sub-AS-64513 neighbor 1.0.0.2 peer-as 64513
+set protocols bgp group sub-AS-64513 neighbor 1.0.0.2 local-as 64513
+set protocols ldp interface ge-0/0/2.0
+set protocols ldp interface ge-0/0/3.0
+set protocols ldp interface lo0.0
+set protocols ospf area 0.0.0.0 interface ge-0/0/2.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/3.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface lo0.0 interface-type p2p
+
+**Junos 2**
+===================
+
+root# show | display set
+
+set version 24.2R1-S2.5
+set interfaces ge-0/0/1 unit 0 family inet address 5.0.0.1/24
+set interfaces ge-0/0/1 unit 0 family mpls
+set interfaces ge-0/0/2 unit 0 family inet address 192.168.2.2/30
+set interfaces ge-0/0/3 unit 0 family inet address 7.0.0.1/24
+set interfaces ge-0/0/3 unit 0 family mpls
+set interfaces ge-0/0/4 unit 0 family inet address 12.0.0.1/30
+set interfaces ge-0/0/4 unit 0 family mpls
+set interfaces ge-0/0/5 unit 0 family inet address 192.168.6.1/30
+set interfaces ge-0/0/6 unit 0 family inet address 211.0.0.1/24
+set interfaces ge-0/0/6 unit 0 family mpls
+set interfaces lo0 unit 0 family inet address 100.0.0.2/32
+set interfaces lo0 unit 0 family mpls
+set policy-options policy-statement COPY-ONLY-100 term 1 from route-filter 100.0.0.10/32 exact
+set policy-options policy-statement COPY-ONLY-100 term 1 then accept
+set policy-options policy-statement COPY-ONLY-100 term 2 then reject
+set policy-options policy-statement LDP-EGRESS from protocol direct
+set policy-options policy-statement LDP-EGRESS then accept
+set routing-instances CUST-ORNG instance-type vrf
+set routing-instances CUST-ORNG protocols bgp group EBGP-AS160 type external
+set routing-instances CUST-ORNG protocols bgp group EBGP-AS160 neighbor 192.168.6.2 peer-as 160
+set routing-instances CUST-ORNG interface ge-0/0/5.0
+set routing-instances CUST-ORNG route-distinguisher 1601:1601
+set routing-instances CUST-ORNG vrf-target target:1601:1601
+set routing-instances CUST132 instance-type vrf
+set routing-instances CUST132 protocols bgp group EBGP-AS132 type external
+set routing-instances CUST132 protocols bgp group EBGP-AS132 neighbor 192.168.2.1 peer-as 132
+set routing-instances CUST132 interface ge-0/0/2.0
+set routing-instances CUST132 route-distinguisher 65000:65000
+set routing-instances CUST132 vrf-target target:65000:65000
+set routing-options autonomous-system 64512
+set routing-options confederation 123
+set routing-options confederation members 64512
+set routing-options confederation members 64513
+set routing-options confederation members 64514
+set routing-options static rib-group COPY-INET0-TO-INET3
+set routing-options static route 100.0.0.10/32 next-hop 12.0.0.2
+set routing-options rib-groups COPY-INET0-TO-INET3 import-rib inet.0
+set routing-options rib-groups COPY-INET0-TO-INET3 import-rib inet.3
+set routing-options rib-groups COPY-INET0-TO-INET3 import-policy COPY-ONLY-100
+set protocols router-advertisement interface fxp0.0 managed-configuration
+set protocols bgp group to-sub-AS-64513 type external
+set protocols bgp group to-sub-AS-64513 multihop
+set protocols bgp group to-sub-AS-64513 local-address 100.0.0.2
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.5 family inet unicast
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.5 family inet-vpn unicast
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.5 peer-as 64513
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.5 local-as 64512
+set protocols bgp group sub-AS-64512 type internal
+set protocols bgp group sub-AS-64512 local-address 100.0.0.2
+set protocols bgp group sub-AS-64512 neighbor 100.0.0.3 family inet unicast
+set protocols bgp group sub-AS-64512 neighbor 100.0.0.3 family inet-vpn unicast
+set protocols bgp group sub-AS-64512 neighbor 100.0.0.3 peer-as 64512
+set protocols bgp group sub-AS-64512 neighbor 100.0.0.3 local-as 64512
+set protocols bgp group to-AS-124 type external
+set protocols bgp group to-AS-124 neighbor 100.0.0.10 multihop
+set protocols bgp group to-AS-124 neighbor 100.0.0.10 local-address 100.0.0.2
+set protocols bgp group to-AS-124 neighbor 100.0.0.10 family inet-vpn unicast
+set protocols bgp group to-AS-124 neighbor 100.0.0.10 peer-as 124
+set protocols bgp group to-AS-124 neighbor 100.0.0.10 local-as 123
+set protocols bgp traceoptions file bgp-confed.log
+set protocols bgp traceoptions flag state
+set protocols bgp traceoptions flag open
+set protocols bgp traceoptions flag update
+set protocols bgp traceoptions flag general
+set protocols ldp egress-policy LDP-EGRESS
+set protocols ldp interface ge-0/0/1.0
+set protocols ldp interface ge-0/0/3.0
+set protocols ldp interface ge-0/0/6.0
+set protocols ldp interface lo0.0
+set protocols ospf area 0.0.0.0 interface ge-0/0/1.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface lo0.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/3.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/6.0 interface-type p2p
+
+**Junos 3**
+===================
+
+root# show | display set
+
+set version 24.2R1-S2.5
+set interfaces ge-0/0/1 unit 0 family inet address 5.0.0.2/24
+set interfaces ge-0/0/1 unit 0 family mpls
+set interfaces ge-0/0/2 unit 0 family inet address 123.0.0.1/30
+set interfaces ge-0/0/3 vlan-tagging
+set interfaces ge-0/0/3 unit 10 vlan-id 10
+set interfaces ge-0/0/3 unit 10 family inet address 13.0.10.1/30
+set interfaces lo0 unit 0 family inet address 100.0.0.3/32
+set interfaces lo0 unit 0 family mpls
+set policy-options policy-statement LDP-EGRESS from protocol direct
+set policy-options policy-statement LDP-EGRESS then accept
+set routing-instances CUST132 instance-type vrf
+set routing-instances CUST132 protocols bgp group to-sub-AS-124 type external
+set routing-instances CUST132 protocols bgp group to-sub-AS-124 family inet unicast
+set routing-instances CUST132 protocols bgp group to-sub-AS-124 neighbor 13.0.10.2 peer-as 124
+set routing-instances CUST132 protocols bgp group to-sub-AS-124 neighbor 13.0.10.2 local-as 123
+set routing-instances CUST132 interface ge-0/0/3.10
+set routing-instances CUST132 route-distinguisher 65000:65000
+set routing-instances CUST132 vrf-target target:65000:65000
+set routing-options autonomous-system 64512
+set routing-options confederation 123
+set routing-options confederation members 64512
+set routing-options confederation members 64513
+set routing-options confederation members 64514
+set protocols router-advertisement interface fxp0.0 managed-configuration
+set protocols bgp group sub-AS-64512 type internal
+set protocols bgp group sub-AS-64512 local-address 100.0.0.3
+set protocols bgp group sub-AS-64512 neighbor 100.0.0.2 family inet unicast
+set protocols bgp group sub-AS-64512 neighbor 100.0.0.2 family inet-vpn unicast
+set protocols bgp group sub-AS-64512 neighbor 100.0.0.2 peer-as 64512
+set protocols bgp group sub-AS-64512 neighbor 100.0.0.2 local-as 64512
+set protocols ldp egress-policy LDP-EGRESS
+set protocols ldp interface ge-0/0/1.0
+set protocols ldp interface lo0.0
+set protocols ospf area 0.0.0.0 interface ge-0/0/1.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface lo0.0 interface-type p2p
+
+**Junos 4**
+===================
+
+root# show | display set
+
+set version 24.2R1-S2.5
+set interfaces ge-0/0/1 unit 0 family inet address 121.0.0.1/30
+set interfaces ge-0/0/2 unit 0 family inet address 9.0.0.1/24
+set interfaces ge-0/0/2 unit 0 family mpls
+set interfaces ge-0/0/3 unit 0 family inet address 2.0.0.1/24
+set interfaces ge-0/0/3 unit 0 family mpls
+set interfaces lo0 unit 0 family inet address 100.0.0.4/32
+set interfaces lo0 unit 0 family mpls
+set policy-options policy-statement LDP-EGRESS from protocol direct
+set policy-options policy-statement LDP-EGRESS then accept
+set routing-options autonomous-system 64513
+set routing-options confederation 123
+set routing-options confederation members 64512
+set routing-options confederation members 64513
+set routing-options confederation members 64514
+set protocols router-advertisement interface fxp0.0 managed-configuration
+set protocols bgp group sub-AS-64513 type internal
+set protocols bgp group sub-AS-64513 neighbor 9.0.0.2 family inet unicast
+set protocols bgp group sub-AS-64513 neighbor 9.0.0.2 family inet-vpn unicast
+set protocols bgp group sub-AS-64513 neighbor 9.0.0.2 peer-as 64513
+set protocols bgp group sub-AS-64513 neighbor 9.0.0.2 local-as 64513
+set protocols bgp group sub-AS-64513 neighbor 2.0.0.2 family inet unicast
+set protocols bgp group sub-AS-64513 neighbor 2.0.0.2 family inet-vpn unicast
+set protocols bgp group sub-AS-64513 neighbor 2.0.0.2 peer-as 64513
+set protocols bgp group sub-AS-64513 neighbor 2.0.0.2 local-as 64513
+set protocols ldp egress-policy LDP-EGRESS
+set protocols ldp interface ge-0/0/2.0
+set protocols ldp interface ge-0/0/3.0
+set protocols ldp interface lo0.0
+set protocols ospf area 0.0.0.0 interface ge-0/0/3.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/2.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface lo0.0 interface-type p2p
+
+**Junos 5**
+===================
+
+root# show | display set
+
+set version 24.2R1-S2.5
+set interfaces ge-0/0/1 unit 0 family inet address 9.0.0.2/24
+set interfaces ge-0/0/1 unit 0 family mpls
+set interfaces ge-0/0/2 unit 0 family inet address 11.0.0.1/24
+set interfaces ge-0/0/2 unit 0 family mpls
+set interfaces ge-0/0/3 unit 0 family inet address 7.0.0.2/24
+set interfaces ge-0/0/3 unit 0 family mpls
+set interfaces ge-0/0/4 unit 0 family inet address 7.0.1.2/24
+set interfaces ge-0/0/4 unit 0 family inet address 16.0.0.2/24
+set interfaces ge-0/0/4 unit 0 family mpls
+set interfaces lo0 unit 0 family mpls
+set policy-options policy-statement LDP-EGRESS from protocol direct
+set policy-options policy-statement LDP-EGRESS then accept
+set policy-options policy-statement static-to-ospf term 2 then reject
+set routing-options autonomous-system 64513
+set routing-options confederation 123
+set routing-options confederation members 64512
+set routing-options confederation members 64513
+set routing-options confederation members 64514
+set routing-options static rib-group COPY-INET0-TO-INET3
+set routing-options rib-groups COPY-INET0-TO-INET3 import-rib inet.0
+set routing-options rib-groups COPY-INET0-TO-INET3 import-rib inet.3
+set protocols bgp group to-sub-AS-64512 type external
+set protocols bgp group to-sub-AS-64512 neighbor 100.0.0.2 multihop
+set protocols bgp group to-sub-AS-64512 neighbor 100.0.0.2 local-address 100.0.0.5
+set protocols bgp group to-sub-AS-64512 neighbor 100.0.0.2 family inet unicast
+set protocols bgp group to-sub-AS-64512 neighbor 100.0.0.2 family inet-vpn unicast
+set protocols bgp group to-sub-AS-64512 neighbor 100.0.0.2 peer-as 64512
+set protocols bgp group to-sub-AS-64512 neighbor 100.0.0.2 local-as 64513
+set protocols bgp group sub-AS-64513 type internal
+set protocols bgp group sub-AS-64513 cluster 100.0.0.5
+set protocols bgp group sub-AS-64513 neighbor 9.0.0.1 family inet unicast
+set protocols bgp group sub-AS-64513 neighbor 9.0.0.1 family inet-vpn unicast
+set protocols bgp group sub-AS-64513 neighbor 9.0.0.1 peer-as 64513
+set protocols bgp group sub-AS-64513 neighbor 9.0.0.1 local-as 64513
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 multihop
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 local-address 100.0.0.5
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 family inet unicast
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 family inet-vpn unicast
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 peer-as 64513
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 local-as 64513
+set protocols ldp egress-policy LDP-EGRESS
+set protocols ldp interface ge-0/0/1.0
+set protocols ldp interface ge-0/0/2.0
+set protocols ldp interface ge-0/0/3.0
+set protocols ldp interface lo0.0
+set protocols mpls interface ge-0/0/2.0
+set protocols ospf area 0.0.0.0 interface ge-0/0/1.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/2.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface lo0.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/3.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/4.0
+set protocols ospf export static-to-ospf
+
+**Junos 6**
+===================
+
+root# show | display set
+
+set version 24.2R1-S2.5
+set interfaces ge-0/0/1 unit 0 family inet address 1.0.0.2/24
+set interfaces ge-0/0/1 unit 0 family mpls
+set interfaces ge-0/0/2 unit 0 family inet address 11.0.0.2/24
+set interfaces ge-0/0/2 unit 0 family mpls
+set interfaces ge-0/0/3 unit 0 family inet address 15.0.0.1/24
+set interfaces ge-0/0/3 unit 0 family mpls
+set interfaces ge-0/0/4 unit 0 family inet address 192.168.7.1/30
+set interfaces lo0 unit 0 family inet address 100.0.0.6/32
+set interfaces lo0 unit 0 family mpls
+set policy-options policy-statement LDP-EGRESS from protocol direct
+set policy-options policy-statement LDP-EGRESS then accept
+set routing-instances CUST-ORNG instance-type vrf
+set routing-instances CUST-ORNG protocols bgp group EBGP-AS161 type external
+set routing-instances CUST-ORNG protocols bgp group EBGP-AS161 neighbor 192.168.7.2 peer-as 161
+set routing-instances CUST-ORNG interface ge-0/0/4.0
+set routing-instances CUST-ORNG route-distinguisher 1601:1601
+set routing-instances CUST-ORNG vrf-target target:1601:1601
+set routing-options autonomous-system 64513
+set routing-options confederation 123
+set routing-options confederation members 64512
+set routing-options confederation members 64513
+set routing-options confederation members 64514
+set protocols bgp group sub-AS-64513 type internal
+set protocols bgp group sub-AS-64513 neighbor 1.0.0.1 family inet unicast
+set protocols bgp group sub-AS-64513 neighbor 1.0.0.1 family inet-vpn unicast
+set protocols bgp group sub-AS-64513 neighbor 1.0.0.1 peer-as 64513
+set protocols bgp group sub-AS-64513 neighbor 1.0.0.1 local-as 64513
+set protocols bgp group sub-AS-64513 neighbor 100.0.0.5 local-address 100.0.0.6
+set protocols bgp group sub-AS-64513 neighbor 100.0.0.5 family inet unicast
+set protocols bgp group sub-AS-64513 neighbor 100.0.0.5 family inet-vpn unicast
+set protocols bgp group sub-AS-64513 neighbor 100.0.0.5 peer-as 64513
+set protocols bgp group sub-AS-64513 neighbor 100.0.0.5 local-as 64513
+set protocols bgp group to-sub-AS-64514 type external
+set protocols bgp group to-sub-AS-64514 multihop
+set protocols bgp group to-sub-AS-64514 local-address 100.0.0.6
+set protocols bgp group to-sub-AS-64514 neighbor 100.0.0.9 family inet unicast
+set protocols bgp group to-sub-AS-64514 neighbor 100.0.0.9 family inet-vpn unicast
+set protocols bgp group to-sub-AS-64514 neighbor 100.0.0.9 peer-as 64514
+set protocols bgp group to-sub-AS-64514 neighbor 100.0.0.9 local-as 64513
+set protocols ldp egress-policy LDP-EGRESS
+set protocols ldp interface ge-0/0/1.0
+set protocols ldp interface ge-0/0/2.0
+set protocols ldp interface ge-0/0/3.0
+set protocols ldp interface lo0.0
+set protocols mpls interface ge-0/0/2.0
+set protocols ospf area 0.0.0.0 interface ge-0/0/2.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/3.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface lo0.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/1.0 interface-type p2p
+
+**Junos 7**
+===================
+
+root# show | display set
+
+set version 24.2R1-S2.5
+set interfaces ge-0/0/1 unit 0 family inet address 192.168.3.1/30
+set interfaces ge-0/0/2 unit 0 family inet address 17.0.0.2/24
+set interfaces ge-0/0/2 unit 0 family mpls
+set interfaces ge-0/0/3 unit 0 family inet address 192.168.5.1/30
+set interfaces lo0 unit 0 family inet address 100.0.0.7/32
+set interfaces lo0 unit 0 family mpls
+set policy-options policy-statement LDP-EGRESS from protocol direct
+set policy-options policy-statement LDP-EGRESS then accept
+set routing-instances CUST132 instance-type vrf
+set routing-instances CUST132 protocols bgp group AS-135 type external
+set routing-instances CUST132 protocols bgp group AS-135 family inet unicast
+set routing-instances CUST132 protocols bgp group AS-135 neighbor 192.168.3.2 peer-as 135
+set routing-instances CUST132 interface ge-0/0/1.0
+set routing-instances CUST132 route-distinguisher 65000:65000
+set routing-instances CUST132 vrf-target target:65000:65000
+set routing-instances CYAN instance-type vrf
+set routing-instances CYAN protocols bgp group EBGP-AS150 neighbor 192.168.5.2 family inet unicast
+set routing-instances CYAN protocols bgp group EBGP-AS150 neighbor 192.168.5.2 peer-as 150
+set routing-instances CYAN interface ge-0/0/3.0
+set routing-instances CYAN route-distinguisher 65000:4050
+set routing-instances CYAN vrf-target target:65000:4050
+set routing-options autonomous-system 124
+set protocols bgp group AS-124 type internal
+set protocols bgp group AS-124 neighbor 100.0.0.10 local-address 100.0.0.7
+set protocols bgp group AS-124 neighbor 100.0.0.10 family inet-vpn unicast
+set protocols bgp group AS-124 neighbor 100.0.0.10 peer-as 124
+set protocols bgp group AS-124 neighbor 100.0.0.10 local-as 124
+set protocols ldp egress-policy LDP-EGRESS
+set protocols ldp interface ge-0/0/2.0
+set protocols ldp interface lo0.0
+set protocols ospf area 0.0.0.0 interface lo0.0 passive
+set protocols ospf area 0.0.0.0 interface ge-0/0/2.0 interface-type p2p
+
+**Junos 8**
+===================
+
+root# show | display set
+set version 24.2R1-S2.5
+set interfaces ge-0/0/1 unit 0 family inet address 17.0.0.1/24
+set interfaces ge-0/0/1 unit 0 family mpls
+set interfaces ge-0/0/2 unit 0 family inet address 18.0.0.2/24
+set interfaces ge-0/0/2 unit 0 family mpls
+set interfaces lo0 unit 0 family inet address 100.0.0.8/32
+set interfaces lo0 unit 0 family mpls
+set policy-options policy-statement LDP-EGRESS from protocol direct
+set policy-options policy-statement LDP-EGRESS then accept
+set protocols ldp egress-policy LDP-EGRESS
+set protocols ldp interface ge-0/0/1.0
+set protocols ldp interface ge-0/0/2.0
+set protocols ldp interface lo0.0
+set protocols ospf area 0.0.0.0 interface lo0.0 passive
+set protocols ospf area 0.0.0.0 interface ge-0/0/2.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/1.0 interface-type p2p
+
+**Junos 9**
+===================
+
+root# show | display set
+
+set version 24.2R1-S2.5
+set interfaces ge-0/0/1 unit 0 family inet address 192.168.1.1/30
+set interfaces ge-0/0/2 unit 0 family inet address 16.0.0.2/24
+set interfaces ge-0/0/2 unit 0 family inet address 192.168.4.1/30
+set interfaces ge-0/0/3 unit 0 family inet address 15.0.0.2/24
+set interfaces ge-0/0/3 unit 0 family mpls
+set interfaces ge-0/0/5 unit 0 family inet address 20.0.0.1/24
+set interfaces lo0 unit 0 family inet address 100.0.0.9/32
+set policy-options policy-statement LDP-EGRESS from protocol direct
+set policy-options policy-statement LDP-EGRESS then accept
+set routing-instances CUST132 instance-type vrf
+set routing-instances CUST132 protocols bgp group EBGP-AS131 type external
+set routing-instances CUST132 protocols bgp group EBGP-AS131 local-address 192.168.1.1
+set routing-instances CUST132 protocols bgp group EBGP-AS131 family inet unicast
+set routing-instances CUST132 protocols bgp group EBGP-AS131 neighbor 192.168.1.2 peer-as 131
+set routing-instances CUST132 interface ge-0/0/1.0
+set routing-instances CUST132 route-distinguisher 65000:65000
+set routing-instances CUST132 vrf-target target:65000:65000
+set routing-instances CYAN instance-type vrf
+set routing-instances CYAN protocols bgp group EBGP-AS140 type external
+set routing-instances CYAN protocols bgp group EBGP-AS140 neighbor 192.168.4.2 local-address 192.168.4.1
+set routing-instances CYAN protocols bgp group EBGP-AS140 neighbor 192.168.4.2 family inet unicast
+set routing-instances CYAN protocols bgp group EBGP-AS140 neighbor 192.168.4.2 peer-as 140
+set routing-instances CYAN interface ge-0/0/2.0
+set routing-instances CYAN route-distinguisher 65000:4050
+set routing-instances CYAN vrf-target target:65000:4050
+set routing-options autonomous-system 64514
+set routing-options confederation 123
+set routing-options confederation members 64512
+set routing-options confederation members 64513
+set routing-options confederation members 64514
+set protocols bgp group to-sub-AS-64513 type external
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 multihop
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 local-address 100.0.0.9
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 family inet unicast
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 family inet-vpn unicast
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 peer-as 64513
+set protocols bgp group to-sub-AS-64513 neighbor 100.0.0.6 local-as 64514
+set protocols ldp egress-policy LDP-EGRESS
+set protocols ldp interface ge-0/0/3.0
+set protocols ldp interface lo0.0
+set protocols ospf area 0.0.0.0 interface lo0.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/3.0 interface-type p2p
+set protocols ospf area 0.0.0.0 interface ge-0/0/5.0 passive
+
+**Junos 10**
+===================
+
+root# show | display set
+
+set version 24.2R1-S2.5
+set interfaces ge-0/0/1 unit 0 family inet address 124.0.0.1/30
+set interfaces ge-0/0/2 unit 0 family inet address 18.0.0.1/24
+set interfaces ge-0/0/2 unit 0 family mpls
+set interfaces ge-0/0/3 vlan-tagging
+set interfaces ge-0/0/3 unit 10 vlan-id 10
+set interfaces ge-0/0/3 unit 10 family inet address 13.0.10.2/30
+set interfaces ge-0/0/4 unit 0 family inet address 12.0.0.2/30
+set interfaces ge-0/0/4 unit 0 family mpls
+set interfaces lo0 unit 0 family inet address 100.0.0.10/32
+set interfaces lo0 unit 0 family mpls
+set policy-options policy-statement COPY-ONLY-100 term 1 from route-filter 100.0.0.2/32 exact
+set policy-options policy-statement COPY-ONLY-100 term 1 then accept
+set policy-options policy-statement COPY-ONLY-100 term 2 then reject
+set policy-options policy-statement LDP-EGRESS from protocol direct
+set policy-options policy-statement LDP-EGRESS then accept
+set routing-instances CUST132 instance-type vrf
+set routing-instances CUST132 protocols bgp group to-AS-123 type external
+set routing-instances CUST132 protocols bgp group to-AS-123 neighbor 13.0.10.1 family inet unicast
+set routing-instances CUST132 protocols bgp group to-AS-123 neighbor 13.0.10.1 peer-as 123
+set routing-instances CUST132 protocols bgp group to-AS-123 neighbor 13.0.10.1 local-as 124
+set routing-instances CUST132 interface ge-0/0/3.10
+set routing-instances CUST132 route-distinguisher 65000:65000
+set routing-instances CUST132 vrf-target target:65000:65000
+set routing-instances CYAN instance-type vrf
+set routing-instances CYAN route-distinguisher 65000:4050
+set routing-instances CYAN vrf-target target:65000:4050
+set routing-options autonomous-system 124
+set routing-options static rib-group COPY-INET0-TO-INET3
+set routing-options static route 100.0.0.2/32 next-hop 12.0.0.1
+set routing-options rib-groups COPY-INET0-TO-INET3 import-rib inet.0
+set routing-options rib-groups COPY-INET0-TO-INET3 import-rib inet.3
+set routing-options rib-groups COPY-INET0-TO-INET3 import-policy COPY-ONLY-100
+set protocols bgp group AS-124 type internal
+set protocols bgp group AS-124 neighbor 100.0.0.7 local-address 100.0.0.10
+set protocols bgp group AS-124 neighbor 100.0.0.7 family inet-vpn unicast
+set protocols bgp group AS-124 neighbor 100.0.0.7 peer-as 124
+set protocols bgp group AS-124 neighbor 100.0.0.7 local-as 124
+set protocols bgp group to-AS-123 type external
+set protocols bgp group to-AS-123 neighbor 100.0.0.2 multihop
+set protocols bgp group to-AS-123 neighbor 100.0.0.2 local-address 100.0.0.10
+set protocols bgp group to-AS-123 neighbor 100.0.0.2 family inet-vpn unicast
+set protocols bgp group to-AS-123 neighbor 100.0.0.2 peer-as 123
+set protocols bgp group to-AS-123 neighbor 100.0.0.2 local-as 124
+set protocols ldp egress-policy LDP-EGRESS
+set protocols ldp interface ge-0/0/2.0
+set protocols ldp interface lo0.0
+set protocols ospf area 0.0.0.0 interface lo0.0 passive
+set protocols ospf area 0.0.0.0 interface ge-0/0/2.0 interface-type p2p
+
+CE3
+===================
+
+CE3# show running-config
+Building configuration...
+
+Current configuration:
+!
+frr version 10.4.1
+frr defaults traditional
+hostname vm
+log syslog informational
+hostname CE3
+service integrated-vtysh-config
+!
+ip prefix-list Cust-A-Networks seq 1 permit 126.0.0.0/30
+ip prefix-list Cust-A-Networks seq 2 permit 128.0.0.0/30
+ip prefix-list Cust-A-Networks seq 3 permit 129.0.0.0/30
+!
+route-map ALLOW-CUST-A-IN permit 10
+match ip address prefix-list Cust-A-Networks
+exit
+!
+ip route 0.0.0.0/0 192.168.122.1
+!
+interface ens4
+ip address 192.168.3.2/30
+exit
+!
+interface ens5
+ip address 129.0.0.1/30
+exit
+!
+router bgp 135
+neighbor 192.168.3.1 remote-as 124
+!
+address-family ipv4 unicast
+network 129.0.0.0/30
+neighbor 192.168.3.1 route-map ALLOW-CUST-A-IN in
+neighbor 192.168.3.1 route-map ALLOW-CUST-A-IN out
+exit-address-family
+exit
+!
+
+CE4 :
+===================
+
+CE4# show running-config
+Building configuration...
+
+Current configuration:
+!
+frr version 10.4.1
+frr defaults traditional
+hostname vm
+log syslog informational
+hostname CE4
+service integrated-vtysh-config
+!
+ip prefix-list CYAN-NW seq 1 permit 140.0.0.0/24
+ip prefix-list CYAN-NW seq 2 permit 150.0.0.0/24
+!
+route-map ALLOW-CYAN-CUST-IN permit 10
+match ip address prefix-list CYAN-NW
+exit
+!
+interface ens5
+ip address 192.168.4.2/30
+exit
+!
+interface ens9
+ip address 140.0.0.1/24
+exit
+!
+router bgp 140
+neighbor 192.168.4.1 remote-as 123
+!
+address-family ipv4 unicast
+network 140.0.0.0/24
+neighbor 192.168.4.1 route-map ALLOW-CYAN-CUST-IN in
+neighbor 192.168.4.1 route-map ALLOW-CYAN-CUST-IN out
+exit-address-family
+exit
+!
+
+CE5
+===================
+
+CE5# show running-config
+Building configuration...
+
+Current configuration:
+!
+frr version 10.4.1
+frr defaults traditional
+hostname vm
+log syslog informational
+hostname CE5
+service integrated-vtysh-config
+!
+ip prefix-list CYAN-NW seq 1 permit 140.0.0.0/24
+ip prefix-list CYAN-NW seq 2 permit 150.0.0.0/24
+!
+route-map ALLOW-CYAN-CUST-IN permit 10
+match ip address prefix-list CYAN-NW
+exit
+!
+interface ens6
+ip address 192.168.5.2/30
+exit
+!
+interface ens7
+ip address 150.0.0.1/24
+exit
+!
+router bgp 150
+neighbor 192.168.5.1 remote-as 124
+!
+address-family ipv4 unicast
+network 150.0.0.0/24
+neighbor 192.168.5.1 route-map ALLOW-CYAN-CUST-IN in
+neighbor 192.168.5.1 route-map ALLOW-CYAN-CUST-IN out
+exit-address-family
+exit
+!
+end
+
+CE6
+===================
+
+CE6# show running-config
+Building configuration...
+
+Current configuration:
+!
+frr version 10.4.1
+frr defaults traditional
+hostname CE6
+log syslog informational
+service integrated-vtysh-config
+!
+ip prefix-list ORNG-NW seq 1 permit 160.0.0.0/24
+ip prefix-list ORNG-NW seq 2 permit 161.0.0.0/24
+!
+route-map ALLOW-ORNG-CUST-IN permit 10
+match ip address prefix-list ORNG-NW
+exit
+!
+interface ens7
+ip address 192.168.6.2/30
+exit
+!
+interface ens5
+ip address 160.0.0.1/24
+exit
+!
+router bgp 160
+neighbor 192.168.6.1 remote-as 123
+!
+address-family ipv4 unicast
+network 160.0.0.0/24
+neighbor 192.168.6.1 route-map ALLOW-ORNG-CUST-IN in
+neighbor 192.168.6.1 route-map ALLOW-ORNG-CUST-IN out
+exit-address-family
+exit
+!
+end
+
+CE7
+===================
+
+CE7# show running-config
+Building configuration...
+
+Current configuration:
+!
+frr version 10.4.1
+frr defaults traditional
+hostname CE7
+log syslog informational
+service integrated-vtysh-config
+!
+ip prefix-list ORNG-NW seq 1 permit 160.0.0.0/24
+ip prefix-list ORNG-NW seq 2 permit 161.0.0.0/24
+!
+route-map ALLOW-ORNG-CUST-IN permit 10
+match ip address prefix-list ORNG-NW
+exit
+!
+interface ens6
+ip address 192.168.7.2/30
+exit
+!
+interface ens5
+ip address 161.0.0.1/24
+exit
+!
+router bgp 161
+neighbor 192.168.7.1 remote-as 123
+!
+address-family ipv4 unicast
+network 161.0.0.0/24
+neighbor 192.168.7.1 route-map ALLOW-ORNG-CUST-IN in
+neighbor 192.168.7.1 route-map ALLOW-ORNG-CUST-IN out
+exit-address-family
+exit
+!
+end
