@@ -1,0 +1,295 @@
+CE1-RED
+================
+
+ip prefix-list Cust-RED-Networks seq 1 permit 50.0.1.0/24
+ip prefix-list Cust-RED-Networks seq 2 permit 50.0.2.0/24
+!
+route-map ALLOW-RED-CUSTOMERS permit 10
+match ip address prefix-list Cust-RED-Networks
+exit
+!
+interface ens4
+ip address 11.0.0.2/24
+exit
+!
+interface ens5
+ip address 50.0.1.1/24
+exit
+!
+router bgp 201
+neighbor 11.0.0.1 remote-as 100
+!
+address-family ipv4 unicast
+network 50.0.1.0/24
+neighbor 11.0.0.1 route-map ALLOW-RED-CUSTOMERS in
+neighbor 11.0.0.1 route-map ALLOW-RED-CUSTOMERS out
+exit-address-family
+exit
+!
+end
+
+CE2-RED
+================
+
+ip prefix-list Cust-RED-Networks seq 1 permit 50.0.1.0/24
+ip prefix-list Cust-RED-Networks seq 2 permit 50.0.2.0/24
+!
+route-map ALLOW-RED-CUSTOMERS permit 10
+match ip address prefix-list Cust-RED-Networks
+exit
+!
+ip route 0.0.0.0/0 192.168.122.1
+!
+interface ens4
+ip address 13.0.0.2/24
+exit
+!
+interface ens5
+ip address 50.0.2.1/24
+exit
+!
+router bgp 203
+neighbor 13.0.0.1 remote-as 100
+!
+address-family ipv4 unicast
+network 50.0.2.0/24
+neighbor 13.0.0.1 route-map ALLOW-RED-CUSTOMERS in
+neighbor 13.0.0.1 route-map ALLOW-RED-CUSTOMERS out
+exit-address-family
+exit
+!
+end
+
+CE1-BLUE
+================
+
+ip prefix-list Cust-BLUE-Networks seq 1 permit 60.0.1.0/24
+ip prefix-list Cust-BLUE-Networks seq 2 permit 60.0.2.0/24
+!
+route-map ALLOW-BLUE-CUSTOMERS permit 10
+match ip address prefix-list Cust-BLUE-Networks
+exit
+!
+interface ens5
+ip address 12.0.0.2/24
+exit
+!
+interface ens6
+ip address 60.0.1.1/24
+exit
+!
+router bgp 202
+neighbor 12.0.0.1 remote-as 200
+!
+address-family ipv4 unicast
+network 60.0.1.0/24
+neighbor 12.0.0.1 route-map ALLOW-BLUE-CUSTOMERS in
+neighbor 12.0.0.1 route-map ALLOW-BLUE-CUSTOMERS out
+exit-address-family
+exit
+!
+end
+
+CE2-BLUE
+================
+
+ip prefix-list Cust-BLUE-Networks seq 1 permit 60.0.1.0/24
+ip prefix-list Cust-BLUE-Networks seq 2 permit 60.0.2.0/24
+!
+route-map ALLOW-BLUE-CUSTOMERS permit 10
+match ip address prefix-list Cust-BLUE-Networks
+exit
+!
+ip route 0.0.0.0/0 192.168.122.1
+!
+interface ens4
+ip address 14.0.0.2/24
+exit
+!
+interface ens5
+ip address 60.0.2.1/24
+exit
+!
+router bgp 204
+neighbor 14.0.0.1 remote-as 200
+!
+address-family ipv4 unicast
+network 60.0.2.0/24
+neighbor 14.0.0.1 route-map ALLOW-BLUE-CUSTOMERS in
+neighbor 14.0.0.1 route-map ALLOW-BLUE-CUSTOMERS out
+exit-address-family
+exit
+!
+end
+
+vEOS1
+================
+
+service routing protocols model multi-agent
+
+hostname vEOS1
+
+vrf instance blue
+rd 200:200
+!
+vrf instance red
+rd 100:100
+!
+interface Ethernet1
+no switchport
+vrf red
+ip address 11.0.0.1/24
+!
+interface Ethernet2
+!
+interface Ethernet3
+no switchport
+vrf blue
+ip address 12.0.0.1/24
+!
+interface Ethernet4
+no switchport
+ip address 192.168.0.1/30
+!
+interface Ethernet5
+!
+interface Loopback0
+ip address 10.10.10.10/32
+!
+interface Loopback1
+ip address 1.1.1.1/32
+!
+interface Loopback2
+ip address 2.2.2.2/32
+!
+interface Management1
+!
+ip routing
+ip routing vrf blue
+ip routing vrf red
+!
+
+mpls ip
+!
+
+router bgp 104
+router-id 10.10.10.10
+neighbor 192.168.0.2 remote-as 105
+neighbor 192.168.0.2 local-as 104 no-prepend replace-as
+neighbor 192.168.0.2 send-community extended
+!
+address-family vpn-ipv4
+neighbor 192.168.0.2 activate
+!
+vrf blue
+rd 200:200
+route-target import vpn-ipv4 200:200
+route-target export vpn-ipv4 200:200
+router-id 2.2.2.2
+bgp confederation identifier 200
+bgp confederation peers 104-105
+neighbor 12.0.0.2 remote-as 202
+neighbor 12.0.0.2 local-as 200 no-prepend replace-as
+!
+address-family ipv4
+neighbor 12.0.0.2 activate
+!
+vrf red
+rd 100:100
+route-target import vpn-ipv4 100:100
+route-target export vpn-ipv4 100:100
+router-id 1.1.1.1
+bgp confederation identifier 100
+bgp confederation peers 104-105
+neighbor 11.0.0.2 remote-as 201
+neighbor 11.0.0.2 local-as 100 no-prepend replace-as
+!
+address-family ipv4
+neighbor 11.0.0.2 activate
+!
+
+vEOS2
+================
+
+service routing protocols model multi-agent
+!
+hostname vEOS2
+!
+vrf instance blue
+rd 200:200
+!
+vrf instance red
+rd 100:100
+!
+interface Ethernet1
+no switchport
+ip address 192.168.0.2/30
+!
+interface Ethernet2
+no switchport
+vrf red
+ip address 13.0.0.1/24
+!
+interface Ethernet3
+no switchport
+vrf blue
+ip address 14.0.0.1/24
+!
+interface Ethernet4
+!
+interface Ethernet5
+!
+interface Loopback0
+ip address 10.10.10.20/32
+!
+interface Loopback1
+ip address 3.3.3.3/32
+!
+interface Loopback2
+ip address 4.4.4.4/32
+!
+interface Management1
+!
+ip routing
+ip routing vrf blue
+ip routing vrf red
+!
+mpls ip
+!
+
+router bgp 105
+router-id 10.10.10.20
+neighbor 192.168.0.1 remote-as 104
+neighbor 192.168.0.1 local-as 105 no-prepend replace-as
+neighbor 192.168.0.1 send-community extended
+!
+address-family vpn-ipv4
+neighbor 192.168.0.1 activate
+!
+vrf blue
+rd 200:200
+route-target import vpn-ipv4 200:200
+route-target export vpn-ipv4 200:200
+router-id 4.4.4.4
+bgp confederation identifier 200
+bgp confederation peers 104-105
+neighbor 14.0.0.2 remote-as 204
+neighbor 14.0.0.2 local-as 200 no-prepend replace-as
+!
+address-family ipv4
+neighbor 14.0.0.2 activate
+!
+vrf red
+rd 100:100
+route-target import vpn-ipv4 100:100
+route-target export vpn-ipv4 100:100
+router-id 3.3.3.3
+bgp confederation identifier 100
+bgp confederation peers 104-105
+neighbor 13.0.0.2 remote-as 203
+neighbor 13.0.0.2 local-as 100 no-prepend replace-as
+!
+address-family ipv4
+neighbor 13.0.0.2 activate
+redistribute bgp leaked
+!
